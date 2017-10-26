@@ -12,18 +12,19 @@ function tryAutotranslate(english, translated) {
     // Formulas:
     //   $...$
     //    **$...$
-    let isFormula = english.match(/^[\s\*]*(\$[^\$]+\$(\s|\\n|\*)*)+$/g);
+    let isFormula = english.match(/^>?[\s\*]*(\$[^\$]+\$(\s|\\n|\*)*)+$/g);
     // contains a \\text{ clause except specific text clauses:
     //   \\text{ cm}
     //   \\text{ m}
     //   \\text{ g}
-    let containsText = english.match(/\\\\text\{(?! cm\})(?! m\})(?! g\})/);
+    let containsText = english.match(/\\\\text\{(?! ?cm\})(?! ?m\})(?! ?g\})/);
     // URLs:
     //   ![](web+graphie://ka-perseus-graphie.s3.amazonaws.com/...)
     //   web+graphie://ka-perseus-graphie.s3.amazonaws.com/...
     //   https://ka-perseus-graphie.s3.amazonaws.com/...png
     let isPerseusImageURL = english.match(/^(!\[\]\()?\s*(http|https|web\+graphie):\/\/ka-perseus-(images|graphie)\.s3\.amazonaws\.com\/[0-9a-f]+(\.(svg|png|jpg))?\)?\s*$/g)
-    let isFormulaPlusImage = english.match(/^[\s\*]*(\$[^\$]+\$(\s|\\n|\*)*)+(!\[\]\()?\s*(http|https|web\+graphie):\/\/ka-perseus-(images|graphie)\.s3\.amazonaws\.com\/[0-9a-f]+(\.(svg|png|jpg))?\)?\s*$/g)
+
+    let isFormulaPlusImage = english.match(/^>?[\s\*]*(\$[^\$]+\$(\s|\\n|\*)*)+(!\[\]\()?\s*(http|https|web\+graphie):\/\/ka-perseus-(images|graphie)\.s3\.amazonaws\.com\/[0-9a-f]+(\.(svg|png|jpg))?\)?\s*$/g)
 
     if(isFormula && !containsText) {
         return english; // Nothing to translate
