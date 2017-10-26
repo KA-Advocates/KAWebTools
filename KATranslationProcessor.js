@@ -13,7 +13,11 @@ function tryAutotranslate(english, translated) {
     //   $...$
     //    **$...$
     let isFormula = english.match(/^[\s\*]*(\$[^\$]+\$(\s|\\n|\*)*)+$/g);
-    let containsText = english.includes("\\text{");
+    // contains a \\text{ clause except specific text clauses:
+    //   \\text{ cm}
+    //   \\text{ m}
+    //   \\text{ g}
+    let containsText = english.match(/\\\\text\{(?! cm\})(?! m\})(?! g\})/);
     // URLs:
     //   ![](web+graphie://ka-perseus-graphie.s3.amazonaws.com/...)
     //   web+graphie://ka-perseus-graphie.s3.amazonaws.com/...
