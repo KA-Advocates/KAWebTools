@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prototype PO processor</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.0/css/bulma.min.css">
+    <script type="text/javascript" src="https://unpkg.com/gettext-parser-dist@0.0.2/dist.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/text-encoding@0.6.4/lib/encoding.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/lodash@4.17.4/lodash.js"></script>
+
+
+    <script type="text/javascript" src="POParser.js"></script>
+    <script type="text/javascript" src="POExporter.js"></script>
+  </head>
+  <body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title">
+        Prototype PO processor
+      </h1>
+      <div class="file has-name">
+          <label class="file-label">
+            <input class="file-input" type="file" name="resume" onchange="handleFiles(this.files)">
+            <span class="file-cta">
+              <span class="file-icon">
+                <i class="fa fa-upload"></i>
+              </span>
+              <span class="file-label">
+                Choose a file…
+              </span>
+            </span>
+            <span class="file-name">
+              Please select PO file!
+            </span>
+          </label>
+        </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+        <p class="subtitle" id="progressMsg"></p>
+        <progress id="loadProgress" class="progress is-primary is-medium" value="0" max="100">0%</progress>
+        <div id="results">
+        </div>
+    </div>
+  </section>
+
+  <script type="text/javascript">
+      function handleTranslations(filename, po) {
+          $("#results").empty() // Remove previous results
+          for (let trans of Object.values(po.translations[''])) {
+              let isFormulaOnly = trans.msgid.match(/^\$[^\$]+\$(\s|\\n)*$/g);
+              let containsText = _.includes(trans.msgid, "\\text{");
+  
+                if(isFormulaOnly && !containsText) {
+                    $("#results").append(`<p>${trans.msgid}</p>`)
+                }
+          }
+          downloadPO(new POExporter(po).compile(), filename + ".po")
+
+      }
+
+      function downloadPO(pocontent, filename) {
+        console.log(pocontent)
+            var a = window.document.createElement('a');
+            a.href = window.URL.createObjectURL(new Blob([pocontent], {type: 'text/x-gettext-translation'}));
+            a.download = 'test.po';
+
+            // Append anchor to body.
+            document.body.appendChild(a);
+            a.click();
+
+            // Remove anchor from body
+            document.body.removeChild(a);
+      }
+
+      function handleFiles(files) {
+        let file = files[0]
+        let filesize = file.size
+        let offset = 0;
+        let chunksize = 65536*8;
+        let currentChunk = 0;
+        let nchunks = filesize / chunksize;
+
+        let pop = new POParser();
+
+        $("#progressMsg").text(`Loading ${file.name} ...`)
+
+        // Read chunk-wise https://stackoverflow.com/a/28318964/2597135
+
+        let chunkReaderBlock = function(_offset, length, _file) {
+            var reader = new FileReader();
+            var blob = _file.slice(_offset, length + _offset);
+            reader.onload = readEventHandler;
+            reader.readAsText(blob);
+        }
+
+        var readEventHandler = function(evt) {
+            if (evt.target.error == null) {
+                offset += evt.target.result.length;
+                currentChunk += 1
+                pop._lexer(evt.target.result);
+                // Update progress
+                $("#loadProgress").attr("value", 100 * (currentChunk / nchunks))
+            } else {
+                $("#progressMsg").text(`Read error: ${evt.target.error}`);
+                return;
+            }
+            if (offset >= filesize) {
+                let po = pop._finalize();
+                $("#progressMsg").text("Processing translations")
+                handleTranslations(file.name, po);
+                // Finished
+            } else {
+                // Read next chunk
+                chunkReaderBlock(offset, chunksize, file);
+            }
+
+        }
+
+        // Start reading
+        chunkReaderBlock(offset, chunksize, file);
+      }
+  </script>
+  </body>
+</html>
