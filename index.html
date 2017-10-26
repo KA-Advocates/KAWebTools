@@ -58,11 +58,17 @@
      * Must return null if the string can't be auto-translated.
      */
     function tryAutotranslate(english, translated) {
-        // Formula
+        // Formulas
         let isFormulaOnly = english.match(/^\$[^\$]+\$(\s|\\n)*$/g);
         let containsText = _.includes(english, "\\text{");
+        // URLs
+        let isPerseusImageURL = english.match(/^\s*(http|https|web\+graphie):\/\/ka-perseus-(images|graphie)\.s3\.amazonaws\.com\/[0-9a-f]+(\.(svg|png|jpg))?\s*$/g)
 
         if(isFormulaOnly && !containsText) {
+            return english; // Nothing to translate
+        }
+
+        if(isPerseusImageURL) {
             return english; // Nothing to translate
         }
 
@@ -98,6 +104,8 @@
                     autoTranslatedCount++;
                 }
             }
+            // Remove comments, they just take up space in the resulting  file
+            delete trans.comments;
         }
         return autoTranslatedCount;
      }
