@@ -74,7 +74,8 @@ function handleTranslations(po) {
             }
         }
     }
-    eff.print()
+    eff.cleanup()
+    eff.exportJSON()
     return newPO;
  }
 
@@ -85,15 +86,26 @@ class ExperimentalFooFinder {
         this.translated = {}
     }
 
-    add(engl, translation) {
+    /**
+     * Index a english string with optional translation
+     */
+    add(engl, translation=null) {
         let normalized = engl.replace(/\d/g, "")
         if(this.index[normalized] === undefined) {
             this.index[normalized] = []
         }
-        this.index[normalized].push({msgid: engl})
+        this.index[normalized].push(engl)
         if(translation !== null) {
             this.translated[normalized] = {msgid: engl, msgstr: translation}
         }
+    }
+
+    /**
+     * Remove strings with no indexed duplicates from the index
+     * Call this after indexing all strings 
+     */
+    cleanup() {
+        this.index = _.pickBy(this.index, v => v.length > 1)
     }
 
     print() {
@@ -102,6 +114,13 @@ class ExperimentalFooFinder {
                 console.log(v)
             }
         }
+    }
+
+    exportJSON() {
+        downloadFile(JSON.stringify({
+            index: this.index,
+            translations: this.translated
+        }), "my.json", "application/json")
     }
 }
 /**
