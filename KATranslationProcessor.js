@@ -51,14 +51,17 @@ function handleTranslations(po) {
     let newPO = _.clone(po);
     newPO.translations = {'': []}
 
+    let eff = new ExperimentalFooFinder()
+
     for (let trans of Object.values(po.translations[''])) {
         let engl = trans.msgid;
         // Ignore everything but first translations
-        let translation = trans.msgstr === undefined ? "" : trans.msgstr[0];
+        let translation = trans.msgstr === undefined ? null : trans.msgstr[0];
         // Does string have at least one translation?
         let hasTranslations = translation != "";
         // Try to auto-translate if it has any translations
         if(!hasTranslations) {
+            eff.add(engl, translation)
             let autotranslation = tryAutotranslate(engl, translation);
             if(autotranslation) { // if we have an autotranslation
                 // Insert new PO data structure (will be exported later)
@@ -71,9 +74,36 @@ function handleTranslations(po) {
             }
         }
     }
+    eff.print()
     return newPO;
  }
 
+// not yet finished
+class ExperimentalFooFinder {
+    constructor() {
+        this.index = {}
+        this.translated = {}
+    }
+
+    add(engl, translation) {
+        let normalized = engl.replace(/\d/g, "")
+        if(this.index[normalized] === undefined) {
+            this.index[normalized] = []
+        }
+        this.index[normalized].push({msgid: engl})
+        if(translation !== null) {
+            this.translated[normalized] = translation
+        }
+    }
+
+    print() {
+        for(let [k,v] of Object.entries(this.index)) {
+            if(v.length > 2) {
+                console.log(v)
+            }
+        }
+    }
+}
 /**
  * Handle a parsed PO object
  */
