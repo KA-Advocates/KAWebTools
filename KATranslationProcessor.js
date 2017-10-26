@@ -12,19 +12,20 @@ function tryAutotranslate(english, translated) {
     // Formulas:
     //   $...$
     //    **$...$
-    let isFormula = english.match(/^[\s\*]*\$[^\$]+\$(\s|\\n)*[\s\*]*$/g);
-    let containsText = _.includes(english, "\\text{");
+    let isFormula = english.match(/^[\s\*]*(\$[^\$]+\$(\s|\\n|\*)*)+$/g);
+    let containsText = english.includes("\\text{");
     // URLs:
     //   ![](web+graphie://ka-perseus-graphie.s3.amazonaws.com/...)
     //   web+graphie://ka-perseus-graphie.s3.amazonaws.com/...
     //   https://ka-perseus-graphie.s3.amazonaws.com/...png
     let isPerseusImageURL = english.match(/^(!\[\]\()?\s*(http|https|web\+graphie):\/\/ka-perseus-(images|graphie)\.s3\.amazonaws\.com\/[0-9a-f]+(\.(svg|png|jpg))?\)?\s*$/g)
+    let isFormulaPlusImage = english.match(/^[\s\*]*(\$[^\$]+\$(\s|\\n|\*)*)+(!\[\]\()?\s*(http|https|web\+graphie):\/\/ka-perseus-(images|graphie)\.s3\.amazonaws\.com\/[0-9a-f]+(\.(svg|png|jpg))?\)?\s*$/g)
 
     if(isFormula && !containsText) {
         return english; // Nothing to translate
     }
 
-    if(isPerseusImageURL) {
+    if(isPerseusImageURL || isFormulaPlusImage) {
         return english; // Nothing to translate
     }
 
@@ -104,4 +105,11 @@ function onFileSelected(files) {
     }, (err) => { // Error while reading file
         $("#progressMsg").text(`Read error: ${err}`);
     })
+}
+
+if(typeof module !== "undefined") {
+    const _ = require("lodash")
+    module.exports = {
+        tryAutotranslate: tryAutotranslate
+    }
 }
