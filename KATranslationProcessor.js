@@ -92,7 +92,7 @@ class ExperimentalFooFinder {
         }
         this.index[normalized].push({msgid: engl})
         if(translation !== null) {
-            this.translated[normalized] = translation
+            this.translated[normalized] = {msgid: engl, msgstr: translation}
         }
     }
 
