@@ -1,5 +1,7 @@
 
 /**
+ * Try to autotranslate simple strings
+ *
  * This is called for untranslated strings.
  * It will not be called for already-translated strings
  * 
@@ -7,8 +9,10 @@
  * Must return null if the string can't be auto-translated.
  */
 function tryAutotranslate(english, translated) {
-    // Formulas
-    let isFormulaOnly = english.match(/^\$[^\$]+\$(\s|\\n)*$/g);
+    // Formulas:
+    //   $...$
+    //    **$...$
+    let isFormula = english.match(/^[\s\*]*\$[^\$]+\$(\s|\\n)*[\s\*]*$/g);
     let containsText = _.includes(english, "\\text{");
     // URLs:
     //   ![](web+graphie://ka-perseus-graphie.s3.amazonaws.com/...)
@@ -16,7 +20,7 @@ function tryAutotranslate(english, translated) {
     //   https://ka-perseus-graphie.s3.amazonaws.com/...png
     let isPerseusImageURL = english.match(/^(!\[\]\()?\s*(http|https|web\+graphie):\/\/ka-perseus-(images|graphie)\.s3\.amazonaws\.com\/[0-9a-f]+(\.(svg|png|jpg))?\)?\s*$/g)
 
-    if(isFormulaOnly && !containsText) {
+    if(isFormula && !containsText) {
         return english; // Nothing to translate
     }
 
@@ -37,8 +41,11 @@ function showAutotranslatedString(english, translated) {
 }
 
 function handleTranslations(po) {
-    let autoTranslatedCount = 0;
-    for (let trans of Object.values(po)) {
+    // We will only export autotranslated strings
+    let newPO = _.clone(po);
+    newPO.translations = {'': []}
+
+    for (let trans of Object.values(po.translations[''])) {
         let engl = trans.msgid;
         // Ignore everything but first translations
         let translation = trans.msgstr === undefined ? "" : trans.msgstr[0];
@@ -47,33 +54,32 @@ function handleTranslations(po) {
         // Try to auto-translate if it has any translations
         if(!hasTranslations) {
             let autotranslation = tryAutotranslate(engl, translation);
-            if(autotranslation) {
-                // Insert into PO data structure (will be exported later)
-                trans.msgstr = [autotranslation];
+            if(autotranslation) { // if we have an autotranslation
+                // Insert new PO data structure (will be exported later)
+                newPO.translations[''].push({
+                    msgid: engl,
+                    msgstr: [autotranslation]
+                })
                 // Update UI
                 showAutotranslatedString(engl, autotranslation);
-                // Update stats
-                autoTranslatedCount++;
             }
         }
-        // Remove comments, they just take up space in the resulting  file
-        delete trans.comments;
     }
-    return autoTranslatedCount;
+    return newPO;
  }
 
 /**
  * Handle a parsed PO object
  */
 function handlePOObject(filename, po) {
-    let autoTranslatedCount = 0;
     // Remove previous results
     $("#results").empty();
     // Go through PO file and try to auto-translate untranslated strings.
-    autoTranslatedCount += handleTranslations(po.translations['']);
+    let newPO = handleTranslations(po);
+    let autoTranslatedCount = newPO.translations[''].length;
     $("#progressMsg").text(`Auto-translated ${autoTranslatedCount} strings`)
     // Export to new PO
-    downloadFile(new POExporter(po).compile(),
+    downloadFile(new POExporter(newPO).compile(),
         filename + ".translated.po",
         'text/x-gettext-translation')
 }
