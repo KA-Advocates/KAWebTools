@@ -10,14 +10,12 @@ class PatternIndexer {
      * Index a english string with optional translation
      */
     add(engl, translation=null) {
+        // Remove digits
         let normalized = engl.replace(/\d/g, "")
         if(this.index[normalized] === undefined) {
             this.index[normalized] = []
         }
         this.index[normalized].push(engl)
-        if(translation !== null && translation != "") {
-            this.translated[normalized] = {msgid: engl, msgstr: translation}
-        }
     }
 
     /**
@@ -36,11 +34,14 @@ class PatternIndexer {
         }
     }
 
+    showStats() {
+        console.info(`Pattern storage has ${Object.keys(this.index).length} patterns`)
+        let numSiblings = _.sum(Object.values(this.index).map(v => v.length))
+        console.info(`Pattern storage has ${numSiblings} strings in total`)
+    }
+
     exportJSON() {
-        downloadFile(JSON.stringify({
-            index: this.index,
-            translations: this.translated
-        }), "pattern-index.json", "application/json")
+        downloadFile(JSON.stringify(this.index), "pattern-index.json", "application/json")
     }
 }
 

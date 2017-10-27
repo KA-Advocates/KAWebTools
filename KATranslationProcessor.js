@@ -54,8 +54,6 @@ function handleTranslations(po) {
     let newPO = _.clone(po);
     newPO.translations = {'': []}
 
-    console.log(tbi)
-
     for (let trans of Object.values(po.translations[''])) {
         let engl = trans.msgid;
         // Ignore everything but first translations
@@ -80,6 +78,7 @@ function handleTranslations(po) {
         }
     }
     pat.cleanup()
+    pat.showStats()
     return newPO;
  }
 
