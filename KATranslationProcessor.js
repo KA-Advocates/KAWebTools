@@ -120,13 +120,6 @@ function onFileSelected(files) {
     })
 }
 
-/**
- * Download frequency count of text block index
- */
-function downloadTextBlockIndex() {
-    tbi.exportJSON();
-}
-
 if(typeof module !== "undefined") {
     const _ = require("lodash")
     module.exports = {
