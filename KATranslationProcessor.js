@@ -1,3 +1,6 @@
+// Global indexers
+let pat = new PatternIndexer();
+let tbi = new TextBlockIndexer();
 
 /**
  * Try to autotranslate simple strings
@@ -13,11 +16,11 @@ function tryAutotranslate(english, translated) {
     //   $...$
     //    **$...$
     let isFormula = english.match(/^>?[\s\*]*(\$[^\$]+\$(\s|\\n|\*)*)+$/g);
-    // contains a \\text{ clause except specific text clauses:
-    //   \\text{ cm}
-    //   \\text{ m}
-    //   \\text{ g}
-    let containsText = english.match(/\\\\text\{(?! ?cm\})(?! ?m\})(?! ?g\})/);
+    // contains a \text{ clause except specific text clauses:
+    //   \text{ cm}
+    //   \text{ m}
+    //   \text{ g}
+    let containsText = english.match(/\\text\{(?! ?cm\})(?! ?m\})(?! ?g\})/);
     // URLs:
     //   ![](web+graphie://ka-perseus-graphie.s3.amazonaws.com/...)
     //   web+graphie://ka-perseus-graphie.s3.amazonaws.com/...
@@ -51,7 +54,7 @@ function handleTranslations(po) {
     let newPO = _.clone(po);
     newPO.translations = {'': []}
 
-    let eff = new ExperimentalFooFinder()
+    console.log(tbi)
 
     for (let trans of Object.values(po.translations[''])) {
         let engl = trans.msgid;
@@ -59,9 +62,11 @@ function handleTranslations(po) {
         let translation = trans.msgstr === undefined ? null : trans.msgstr[0];
         // Does string have at least one translation?
         let hasTranslations = translation != "";
+
+        tbi.add(engl, translation);
         // Try to auto-translate if it has any translations
         if(!hasTranslations) {
-            eff.add(engl, translation)
+            pat.add(engl, translation)
             let autotranslation = tryAutotranslate(engl, translation);
             if(autotranslation) { // if we have an autotranslation
                 // Insert new PO data structure (will be exported later)
@@ -74,55 +79,10 @@ function handleTranslations(po) {
             }
         }
     }
-    eff.cleanup()
-    eff.exportJSON()
+    pat.cleanup()
     return newPO;
  }
 
-// not yet finished
-class ExperimentalFooFinder {
-    constructor() {
-        this.index = {}
-        this.translated = {}
-    }
-
-    /**
-     * Index a english string with optional translation
-     */
-    add(engl, translation=null) {
-        let normalized = engl.replace(/\d/g, "")
-        if(this.index[normalized] === undefined) {
-            this.index[normalized] = []
-        }
-        this.index[normalized].push(engl)
-        if(translation !== null) {
-            this.translated[normalized] = {msgid: engl, msgstr: translation}
-        }
-    }
-
-    /**
-     * Remove strings with no indexed duplicates from the index
-     * Call this after indexing all strings 
-     */
-    cleanup() {
-        this.index = _.pickBy(this.index, v => v.length > 1)
-    }
-
-    print() {
-        for(let [k,v] of Object.entries(this.index)) {
-            if(v.length > 2) {
-                console.log(v)
-            }
-        }
-    }
-
-    exportJSON() {
-        downloadFile(JSON.stringify({
-            index: this.index,
-            translations: this.translated
-        }), "my.json", "application/json")
-    }
-}
 /**
  * Handle a parsed PO object
  */
@@ -159,6 +119,13 @@ function onFileSelected(files) {
     }, (err) => { // Error while reading file
         $("#progressMsg").text(`Read error: ${err}`);
     })
+}
+
+/**
+ * Download frequency count of text block index
+ */
+function downloadTextBlockIndex() {
+    tbi.exportJSON();
 }
 
 if(typeof module !== "undefined") {
