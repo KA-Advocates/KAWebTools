@@ -154,16 +154,10 @@ function handleParsedXLIFF(dom) {
     return dom; // modified DOM
 }
 
-  /**
-   * This is called when the user selected a file
-   * It reads the file (in chunks)
-   */
-function onFileSelected(files) {
-    let file = files[0];
-    let pop = new POParser();
+function handleSelectedFile(file) {
     $("#progressMsg").text(`Loading ${file.name} ...`)
-
     if(file.name.endsWith(".po")) {
+        let pop = new POParser();
         processLocalFileInChunks(file, (chunk, currentChunk, nchunks) => { // On chunk
             pop._lexer(chunk);
             // Update progress
@@ -191,6 +185,18 @@ function onFileSelected(files) {
             let xml = new XMLSerializer().serializeToString(dom);
             downloadFile(xml, `${file.name}.translated.xliff`, "application/xml")
         }, console.error)
+    } else {
+        alert(`Unknown file (please use PO or XLIFF): ${file.name}`)
+    }
+}
+
+/**
+* This is called when the user selected a file
+* It reads the file (in chunks)
+*/
+function onFileSelected(files) {
+    for(let file of files) {
+        handleSelectedFile(file);
     }
 }
 
