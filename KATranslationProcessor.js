@@ -62,9 +62,9 @@ function handleTranslations(po) {
         let hasTranslations = translation != "";
 
         tbi.add(engl, translation);
+        pat.add(engl, translation)
         // Try to auto-translate if it has any translations
         if(!hasTranslations) {
-            pat.add(engl, translation)
             let autotranslation = tryAutotranslate(engl, translation);
             if(autotranslation) { // if we have an autotranslation
                 // Insert new PO data structure (will be exported later)
