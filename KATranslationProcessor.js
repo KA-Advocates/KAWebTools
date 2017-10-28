@@ -98,6 +98,62 @@ function handlePOObject(filename, po) {
         'text/x-gettext-translation')
 }
 
+function handleParsedXLIFF(dom) {
+    let bodies = dom.getElementsByTagName("body")
+    for(let body of bodies) { // Usually there is only one  body
+        let transUnits = body.getElementsByTagName("trans-unit")
+        let toRemove = []
+        for(let transUnit of transUnits) {
+            let source = transUnit.getElementsByTagName("source")[0]
+            let target = transUnit.getElementsByTagName("target")[0]
+            let isUntranslated = (target.getAttribute("state") == "needs-translation");
+            let mayRemove = true; // set to false when we auto-translate it. false means we won't delete it from the result
+            // Get msgid/msgstr equivalent
+            let engl = source.innerHTML;
+            let translated = isUntranslated ? null : target.innerHTML;
+            // Index
+            tbi.add(engl, translated);
+            if(isUntranslated) {
+                pat.add(engl, translated);
+                let autotranslation = tryAutotranslate(engl, translated);
+                if(autotranslation) { // if we have an autotranslation
+                    target.innerHTML = autotranslation;
+                    target.removeAttribute("state"); // Remove "needs-translation"
+                    mayRemove = false; // Include in the final file
+                    // Update UI
+                    showAutotranslatedString(engl, autotranslation);
+                }
+            }
+            // Remove context in order to save space
+            let notes = transUnit.getElementsByTagName("note");
+            for(let note of notes) {
+                transUnit.removeChild(note)
+            }
+            // Remove (whitespace) text nodes inside <trans-unit> to save space
+            for(let child of transUnit.childNodes) {
+                if(child.nodeType == Node.TEXT_NODE) {
+                    transUnit.removeChild(child)
+                }
+            }
+            // Delete element if we didnt autotranslate
+            if(mayRemove) {
+                toRemove.push(transUnit)
+            }
+        }
+        // Remove (whitespace-only) text content (from pretty XML formatting) from the body to reduce size
+        for(let child of body.childNodes) {
+            if(child.nodeType == Node.TEXT_NODE) {
+                toRemove.push(child);
+            }
+        }
+        // Remove non-autotranslated elements
+        for(let toRemoveElem of toRemove) {
+            body.removeChild(toRemoveElem);
+        }
+    }
+    return dom; // modified DOM
+}
+
   /**
    * This is called when the user selected a file
    * It reads the file (in chunks)
@@ -107,17 +163,35 @@ function onFileSelected(files) {
     let pop = new POParser();
     $("#progressMsg").text(`Loading ${file.name} ...`)
 
-    processLocalFileInChunks(file, (chunk, currentChunk, nchunks) => { // On chunk
-        pop._lexer(chunk);
-        // Update progress
-        $("#loadProgress").attr("value", 100 * (currentChunk / nchunks))
-    }, () => { // On finished
-        let po = pop._finalize();
-        $("#progressMsg").text("Auto-translating... ")
-        handlePOObject(file.name, po);
-    }, (err) => { // Error while reading file
-        $("#progressMsg").text(`Read error: ${err}`);
-    })
+    if(file.name.endsWith(".po")) {
+        processLocalFileInChunks(file, (chunk, currentChunk, nchunks) => { // On chunk
+            pop._lexer(chunk);
+            // Update progress
+            $("#loadProgress").attr("value", 100 * (currentChunk / nchunks))
+        }, () => { // On finished
+            let po = pop._finalize();
+            $("#progressMsg").text("Auto-translating... ")
+            handlePOObject(file.name, po);
+        }, (err) => { // Error while reading file
+            $("#progressMsg").text(`Read error: ${err}`);
+        })
+    } else if (file.name.endsWith(".xliff")) {
+        processLocalFile(file, (content) => {
+            let parser = new DOMParser();
+            // File loaded ; progress = 50%
+            $("#loadProgress").attr("value", 50);
+            let dom = parser.parseFromString(content, "application/xml");
+            // File parsed ; progress = 100%
+            $("#loadProgress").attr("value", 100);
+            $("#progressMsg").text("Auto-translating... ")
+            // Modify DOM with auto-translations
+            dom = handleParsedXLIFF(dom);
+            // Export DOM = download
+            $("#progressMsg").text("Exporting...")
+            let xml = new XMLSerializer().serializeToString(dom);
+            downloadFile(xml, `${file.name}.translated.xliff`, "application/xml")
+        }, console.error)
+    }
 }
 
 if(typeof module !== "undefined") {

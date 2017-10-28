@@ -63,3 +63,14 @@ function processLocalFileInChunks(file, onChunk, onFinish, onError, chunksize=65
     // Start reading the first chunk
     chunkReaderBlock(offset, chunksize, file);
 }
+
+/*
+ * Read a local file in as a huge string
+ * when appropriate.
+ */
+function processLocalFile(file, onFinish, onError) {
+    var reader = new FileReader();
+    reader.onload = () => onFinish(reader.result)
+    reader.onerror = onError
+    reader.readAsText(file);
+}
