@@ -43,6 +43,18 @@ class PatternIndexer {
     exportJSON() {
         downloadFile(JSON.stringify(this.index), "pattern-index.json", "application/json")
     }
+
+    exportCSV() {
+        let data = 
+            _.reverse( // Sort descending
+                _.sortBy(Object.entries(this.index), kv => kv[1]) // Sort by num occurrences
+            )
+        let csv = "";
+        for(let [k,v] of data) {
+            csv += `"${k.replace("\n", "\\n").replace("\r", "\\r")}",${v.length}\n`;
+        }
+        downloadFile(csv, "pattern-index.csv", "application/json")
+    }
 }
 
 /**
@@ -94,5 +106,17 @@ class TextBlockIndexer {
                 _.sortBy(Object.entries(this.index), kv => kv[1]) // Sort by num occurrences
             )
         ), "text-blocks.json", "application/json")
+    }
+
+    exportCSV() {
+        let data = 
+            _.reverse( // Sort descending
+                _.sortBy(Object.entries(this.index), kv => kv[1]) // Sort by num occurrences
+            )
+        let csv = "";
+        for(let [k,v] of data) {
+            csv += `"${k}",${v}\n`;
+        }
+        downloadFile(csv, "text-blocks.csv", "application/json")
     }
 }
